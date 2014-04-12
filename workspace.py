@@ -15,10 +15,10 @@ class Projects(object):
         for d in self.root.dirs():
             if (d / '.git').exists():
                 project = Project(d)
-                self.dirs[project.name] = project
+                self.dirs[project.name.lower()] = project
 
     def __getitem__(self, name):
-        return self.dirs[name]
+        return self.dirs[name.lower()]
 
 if __name__ == '__main__':
     p = Projects()
