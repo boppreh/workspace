@@ -36,20 +36,29 @@ class Project(object):
         self._refresh_files(self.path)
         self.language = self._get_language()
         self.structure = self._get_structure()
-        self.sloc = self._get_line_count()
+        self.sloc, self.largest_file = self._get_size_info()
 
         docs = self.path / 'docs'
         self.docs = docs if docs.exists() else None
 
-    def _get_line_count(self):
+    def _get_size_info(self):
         """
-        Returns a count of all lines in all files in this project.
+        Returns a count of all lines in all files in this project, and the path
+        of the largest file.
         """
         sloc = 0
+        largest_file_size = 0
+        largest_file = None
         for file_path in self.files:
             with file_path.open() as f:
-                sloc += sum(1 for line in f)
-        return sloc
+                file_size = sum(1 for line in f)
+                sloc += file_size
+
+                if file_size > largest_file_size:
+                    largest_file_size = file_size
+                    largest_file = file_path
+
+        return sloc, largest_file
 
     def _convert_glob_to_regex(self, glob_pattern):
         """

@@ -28,7 +28,7 @@ Code
 [x] Number of files
 [x] Size (SLOC)
 [ ] Doc ratio (comments + docs / total SLOC)
-[ ] Largest file
+[x] Largest file
 
 
 Features
