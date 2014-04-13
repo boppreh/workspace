@@ -4,7 +4,7 @@ Project
 [x] Language
 [x] Files
 [x] Structure (single file/multiple files/module)
-[ ] Docs (missing/present)
+[x] Docs (missing/present)
 [ ] Tests status (missing/failing/passing)
 
 Version Control

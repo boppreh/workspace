@@ -8,7 +8,6 @@ language_by_extension = {'.pyw': 'Python',
                           '.go': 'Go',
                           '.nim': 'Nimrod',
                           '.js': 'Javascript',
-                          '.html': 'Javascript',
                           '.as': 'ActionScript',
                           '.java': 'Java'}
 
@@ -26,6 +25,20 @@ class Project(object):
         self.path = Path(path)
         self.name = self.path.name
         self.refresh()
+
+    def refresh(self):
+        """
+        Updates the project properties by reading the newest version of the
+        files. Potentially slow for large projects on slow disks.
+        """
+        self.ignored_patterns = self._get_git_ignore_patterns()
+        self.files = []
+        self._refresh_files(self.path)
+        self.language = self._get_language()
+        self.structure = self._get_structure()
+
+        docs = self.path / 'docs'
+        self.docs = docs if docs.exists() else None
 
     def _convert_glob_to_regex(self, glob_pattern):
         """
@@ -88,17 +101,6 @@ class Project(object):
         else:
             return Project.MULTIPLE_FILES
 
-    def refresh(self):
-        """
-        Updates the project properties by reading the newest version of the
-        files. Potentially slow for large projects on slow disks.
-        """
-        self.ignored_patterns = self._get_git_ignore_patterns()
-        self.files = []
-        self._refresh_files(self.path)
-        self.language = self._get_language()
-        self.structure = self._get_structure()
-
     def _refresh_files(self, path):
         """
         Recursive function that appends the files found in `self.files`.
@@ -148,4 +150,5 @@ class Workspace(object):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language, project.structure)
+        print(project, project.language, project.docs)
+    print('\n'.join(map(str, workspace['simplecrypto'].files)))
