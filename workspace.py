@@ -16,8 +16,9 @@ class GitRepository(object):
     def __init__(self, path):
         self.path = Path(path)
         self.is_dirty = len(self.git('status --porcelain')) > 0
-        self.commit_count = int(self.git('shortlog -s').split()[0])
         self.age = time() - int(self.git('log --format=%at"').split()[0])
+        self.commit_count = sum(int(p.split()[0]) # "total username\n"
+                                for p in self.git('shortlog -s').splitlines())
 
     def git(self, command):
         template = 'git --git-dir="{}" --work-tree="{}" {}'
