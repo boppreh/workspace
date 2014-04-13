@@ -1,5 +1,8 @@
 Project
 -------
+[x] Name
+[x] Language
+[x] Files
 [ ] Repository status (clean/dirty)
 [ ] Remote repository status (synced/ahead/behind)
 [ ] Packaged (not packaged/package version)
@@ -19,7 +22,14 @@ Package
 
 Code
 ----
-[ ] Number of files
-[ ] SLOC
-[ ] comments + docs / total SLOC
+[x] Number of files
+[ ] Size (SLOC)
+[ ] Doc ratio (comments + docs / total SLOC)
 [ ] Largest file
+
+
+Features
+--------
+[x] Ignore files from gitignore
+[x] Ignore non-programming files
+[x] Ignore hidden files/folders
