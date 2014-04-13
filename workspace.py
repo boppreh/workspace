@@ -36,9 +36,20 @@ class Project(object):
         self._refresh_files(self.path)
         self.language = self._get_language()
         self.structure = self._get_structure()
+        self.sloc = self._get_line_count()
 
         docs = self.path / 'docs'
         self.docs = docs if docs.exists() else None
+
+    def _get_line_count(self):
+        """
+        Returns a count of all lines in all files in this project.
+        """
+        sloc = 0
+        for file_path in self.files:
+            with file_path.open() as f:
+                sloc += sum(1 for line in f)
+        return sloc
 
     def _convert_glob_to_regex(self, glob_pattern):
         """
@@ -150,5 +161,4 @@ class Workspace(object):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language, project.docs)
-    print('\n'.join(map(str, workspace['simplecrypto'].files)))
+        print(project, project.language, project.sloc)
