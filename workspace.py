@@ -1,6 +1,7 @@
 from collections import Counter
 from pathlib import Path
 from time import clock
+import re
 
 languages_by_extension = {'.pyw': 'Python',
                           '.py': 'Python',
@@ -26,11 +27,13 @@ class Project(object):
         self.ignored_patterns = []
         if gitignore.exists():
             with gitignore.open() as f:
-                for line in f.read().split():
+                for line in filter(len, f.read().split('\n')):
                     if not line.startswith('#'):
-                        self.ignored_patterns.append(line)
+                        regex = line.replace('.', r'\.').replace('*', '.*').replace('+', r'\+').replace('/', '')
+                        self.ignored_patterns.append(re.compile(regex))
 
         self.files = []
+        self.processed = 0
         self._refresh_files(self.path)
 
         languages = Counter(languages_by_extension[f.suffix] for f in self.files)
@@ -38,11 +41,14 @@ class Project(object):
         self.file_count = len(self.files)
 
     def _refresh_files(self, path):
-        if path.name.startswith('.'):
+        self.processed += 1
+
+        name = path.name
+        if name.startswith('.') or name.startswith('__'):
             return
 
         for pattern in self.ignored_patterns:
-            if path.match(pattern):
+            if pattern.match(name):
                 return
 
         if path.is_file():
@@ -74,5 +80,7 @@ if __name__ == '__main__':
     #p = Project(Path(r'E:\projects\activity'))
     #exit()
     projects = Projects()
-    for project in projects:
-        print(project, project.language, project.processing_time)
+    l = list(projects)
+    print('\n'.join(str((p, p.processing_time, p.file_count)) for p in sorted(l, key=lambda p: p.processing_time)))
+    #for project in projects:
+        #print(project, project.language, project.processing_time)
