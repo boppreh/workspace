@@ -1,7 +1,8 @@
 from collections import Counter
 from pathlib import Path
-from time import clock
+from time import clock, time
 import re
+from subprocess import check_output
 
 language_by_extension = {'.pyw': 'Python',
                           '.py': 'Python',
@@ -10,6 +11,23 @@ language_by_extension = {'.pyw': 'Python',
                           '.js': 'Javascript',
                           '.as': 'ActionScript',
                           '.java': 'Java'}
+
+class GitRepository(object):
+    def __init__(self, path):
+        self.path = Path(path)
+        self.is_dirty = len(self.git('status --porcelain')) > 0
+        self.commit_count = int(self.git('shortlog -s').split()[0])
+        self.age = time() - int(self.git('log --format=%at"').split()[0])
+
+    def git(self, command):
+        template = 'git --git-dir="{}" --work-tree="{}" {}'
+        full_command = template.format(self.path / '.git', self.path, command)
+        return check_output(full_command, shell=True)
+
+    def __repr__(self):
+        return '{}{} commits'.format('*' if self.is_dirty else '',
+                                     self.commit_count)
+
 
 class Project(object):
     """
@@ -25,6 +43,9 @@ class Project(object):
         self.path = Path(path)
         self.name = self.path.name
         self.refresh()
+
+    def repo(self):
+        return GitRepository(self.path)
 
     def refresh(self):
         """
@@ -123,7 +144,7 @@ class Project(object):
 
     def _refresh_files(self, path):
         """
-        Recursive function that appends the files found in `self.files`.
+        Recursive function that appends the files found to `self.files`.
         """
         name = path.name
 
@@ -169,5 +190,7 @@ class Workspace(object):
 
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
-    for project in workspace:
-        print(project, project.language, project.sloc)
+    #for project in workspace:
+    #    print(project, project.language, project.sloc)
+    repo = workspace['simplecrypto'].repo()
+    print(repo, repo.age / 60 / 60 / 24)

@@ -6,13 +6,14 @@ Project
 [x] Structure (single file/multiple files/module)
 [x] Docs (missing/present)
 [ ] Tests status (missing/failing/passing)
+[ ] Packaged (not packaged/package version)
 
 Version Control
 ---------------
-[ ] Repository status (clean/dirty)
+[x] Repository status (clean/dirty)
+[x] Number of commits
 [ ] Remote repository status (synced/ahead/behind)
-[ ] Packaged (not packaged/package version)
-[ ] Last commit date
+[x] Freshness (age in seconds)
 
 
 Package
@@ -21,6 +22,7 @@ Package
 [ ] Convert (creates setup.py and uploads to PyPI) (use packager)
 [ ] Unpublished commits
 [ ] Make version (major/minor/fix)
+[ ] PyPI version
 
 
 Code
