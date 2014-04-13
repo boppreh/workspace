@@ -1,25 +1,42 @@
-from path import path
+from pathlib import Path
 
 class Project(object):
-    def __init__(self, path_):
-        self.path = path_
-        self.name = path_.basename()
+    def __init__(self, path):
+        self.path = path
+        self.name = path.name
+
+    def get_language(self):
+        languages_by_extension = {'.pyw': 'Python',
+                                  '.py': 'Python',
+                                  '.go': 'Go',
+                                  '.nim': 'Nimrod',
+                                  '.js': 'Javascript',
+                                  '.as': 'ActionScript',
+                                  '.java': 'Java'}
+
+        for f in self.path.glob('**/*.*'):
+            if f.suffix in languages_by_extension:
+                return languages_by_extension[f.suffix]
 
     def __repr__(self):
         return '{} ({})'.format(self.name, self.path)
 
 class Projects(object):
     def __init__(self):
-        self.root = path(r'E:\projects')
+        self.root = Path(r'E:\projects')
         self.dirs = {}
-        for d in self.root.dirs():
-            if (d / '.git').exists():
+        for d in self.root.iterdir():
+            if (d / '.git').is_dir():
                 project = Project(d)
                 self.dirs[project.name.lower()] = project
 
     def __getitem__(self, name):
         return self.dirs[name.lower()]
 
+    def __iter__(self):
+        return iter(self.dirs.values())
+
 if __name__ == '__main__':
-    p = Projects()
-    print(p['quine'])
+    projects = Projects()
+    for project in projects:
+        print(project, project.get_language())
