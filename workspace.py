@@ -3,7 +3,7 @@ from pathlib import Path
 from time import clock
 import re
 
-languages_by_extension = {'.pyw': 'Python',
+language_by_extension = {'.pyw': 'Python',
                           '.py': 'Python',
                           '.go': 'Go',
                           '.nim': 'Nimrod',
@@ -16,11 +16,7 @@ class Project(object):
     def __init__(self, path):
         self.path = path
         self.name = path.name
-
-        start = clock()
         self.refresh()
-        end = clock()
-        self.processing_time = int((end - start) * 100) / 100
 
     def _convert_glob_to_regex(self, glob_pattern):
         regex = glob_pattern
@@ -43,16 +39,13 @@ class Project(object):
                         self.ignored_patterns.append(re.compile(regex))
 
         self.files = []
-        self.processed = 0
         self._refresh_files(self.path)
 
-        languages = Counter(languages_by_extension[f.suffix] for f in self.files)
+        languages = Counter(language_by_extension[f.suffix] for f in self.files)
         self.language = languages.most_common()[0][0]
         self.file_count = len(self.files)
 
     def _refresh_files(self, path):
-        self.processed += 1
-
         name = path.name
         if name.startswith('.') or name.startswith('__'):
             return
@@ -62,7 +55,7 @@ class Project(object):
                 return
 
         if path.is_file():
-            if path.suffix in languages_by_extension:
+            if path.suffix in language_by_extension:
                 self.files.append(path)
         else:
             for f in path.iterdir():
@@ -87,10 +80,7 @@ class Projects(object):
         return iter(self.dirs.values())
 
 if __name__ == '__main__':
-    #p = Project(Path(r'E:\projects\activity'))
-    #exit()
     projects = Projects()
     l = list(projects)
-    print('\n'.join(str((p, p.processing_time, p.file_count)) for p in sorted(l, key=lambda p: p.processing_time)))
-    #for project in projects:
-        #print(project, project.language, project.processing_time)
+    for project in projects:
+        print(project, project.language)
