@@ -1,25 +1,25 @@
 Project
 -------
-- Repository status (clean/dirty)
-- Remote repository status (synced/ahead/behind)
-- Packaged (not packaged/package version)
-- Type (single file/multiple files/module)
-- Docs (missing/present)
-- Tests status (missing/failing/passing)
-- Last commit date
+[ ] Repository status (clean/dirty)
+[ ] Remote repository status (synced/ahead/behind)
+[ ] Packaged (not packaged/package version)
+[ ] Type (single file/multiple files/module)
+[ ] Docs (missing/present)
+[ ] Tests status (missing/failing/passing)
+[ ] Last commit date
 
 
 Package
 -------
-- Status (up to date/n commits ahead of published version)
-- Convert (creates setup.py and uploads to PyPI) (use packager)
-- Unpublished commits
-- Make version (major/minor/fix)
+[ ] Status (up to date/n commits ahead of published version)
+[ ] Convert (creates setup.py and uploads to PyPI) (use packager)
+[ ] Unpublished commits
+[ ] Make version (major/minor/fix)
 
 
 Code
 ----
-- Number of files
-- SLOC
-- comments + docs / total SLOC
-- Largest file
+[ ] Number of files
+[ ] SLOC
+[ ] comments + docs / total SLOC
+[ ] Largest file
