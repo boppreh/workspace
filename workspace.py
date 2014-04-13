@@ -17,6 +17,11 @@ class Project(object):
     Represents a single project and its files. May be refreshed for updated
     information.
     """
+    EMPTY = 'empty'
+    SINGLE_FILE = 'single file'
+    MULTIPLE_FILES = 'multiple files'
+    MODULE = 'module'
+
     def __init__(self, path):
         self.path = Path(path)
         self.name = self.path.name
@@ -54,6 +59,35 @@ class Project(object):
                     regex = self._convert_glob_to_regex(line)
                     yield re.compile(regex)
 
+    def _get_language(self):
+        if self.files:
+            # All files are programming files, so we are guaranteed to find
+            # some suffixes here.
+            languages = Counter(language_by_extension[f.suffix]
+                                for f in self.files)
+            # most_common returns a list of tuples (item, count).
+            return languages.most_common(1)[0][0]
+        else:
+            return 'Unknown'
+
+    def _get_structure(self):
+        """
+        Identifies the project structure: empty (no files at all), module
+        (files inside a module folder) or flat, which can be single or multiple
+        file.
+        """
+        if len(self.files) == 0:
+            return Project.EMPTY
+
+        for f in self.files:
+            if len(f.parts) > len(self.path.parts) + 1:
+                return Project.MODULE
+
+        if len(self.files) == 1:
+            return Project.SINGLE_FILE
+        else:
+            return Project.MULTIPLE_FILES
+
     def refresh(self):
         """
         Updates the project properties by reading the newest version of the
@@ -62,15 +96,8 @@ class Project(object):
         self.ignored_patterns = self._get_git_ignore_patterns()
         self.files = []
         self._refresh_files(self.path)
-
-        if self.files:
-            languages = Counter(language_by_extension[f.suffix]
-                                for f in self.files)
-            # most_common returns a list of tuples (item, count).
-            self.language = languages.most_common(1)[0][0]
-        else:
-            self.language = 'Unknown'
-
+        self.language = self._get_language()
+        self.structure = self._get_structure()
 
     def _refresh_files(self, path):
         """
@@ -121,4 +148,4 @@ class Workspace(object):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language)
+        print(project, project.language, project.structure)
