@@ -13,6 +13,9 @@ language_by_extension = {'.pyw': 'Python',
                           '.java': 'Java'}
 
 class GitRepository(object):
+    """
+    Class for tracking Git repo information.
+    """
     def __init__(self, path):
         self.path = Path(path)
         self.is_dirty = len(self.git('status --porcelain')) > 0
@@ -21,6 +24,11 @@ class GitRepository(object):
                                 for p in self.git('shortlog -s').splitlines())
 
     def git(self, command):
+        """
+        Runs a git command on this repository, returning the output.
+
+        Wildly unsafe, do not expose to untrusted input.
+        """
         template = 'git --git-dir="{}" --work-tree="{}" {}'
         full_command = template.format(self.path / '.git', self.path, command)
         return check_output(full_command, shell=True)
@@ -46,6 +54,11 @@ class Project(object):
         self.refresh()
 
     def repo(self):
+        """
+        Returns an up-to-date GitRepository object with information about the
+        version control system of this project. Potentially slow to gather the
+        information.
+        """
         return GitRepository(self.path)
 
     def refresh(self):
