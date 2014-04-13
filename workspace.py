@@ -13,12 +13,24 @@ language_by_extension = {'.pyw': 'Python',
                           '.java': 'Java'}
 
 class Project(object):
+    """
+    Represents a single project and its files. May be refreshed for updated
+    information.
+    """
     def __init__(self, path):
-        self.path = path
-        self.name = path.name
+        self.path = Path(path)
+        self.name = self.path.name
         self.refresh()
 
     def _convert_glob_to_regex(self, glob_pattern):
+        """
+        Converts a path glob pattern (e.g. ".*/") into a regex (e.g. "\.*").
+
+        This is useful because pathlib's implementation of match is orders of
+        magnitude slower than a regex.
+
+        Replacements may not be perfect.
+        """
         regex = glob_pattern
         regex = regex.replace('.', r'\.') # Escape dots.
         regex = regex.replace('*', '.*')
@@ -28,28 +40,49 @@ class Project(object):
         # semantics as regex brackets, so we may keep them.
         return regex
 
-    def refresh(self):
+    def _get_git_ignore_patterns(self):
+        """
+        Returns the compiled regex patterns from the gitignore file.
+        """
         gitignore = self.path / '.gitignore'
-        self.ignored_patterns = []
-        if gitignore.exists():
-            with gitignore.open() as f:
-                for line in filter(len, f.read().split('\n')):
-                    if not line.startswith('#'):
-                        regex = self._convert_glob_to_regex(line)
-                        self.ignored_patterns.append(re.compile(regex))
+        if not gitignore.exists():
+            return
 
+        with gitignore.open() as f:
+            for line in filter(len, f.read().split('\n')):
+                if not line.startswith('#'):
+                    regex = self._convert_glob_to_regex(line)
+                    yield re.compile(regex)
+
+    def refresh(self):
+        """
+        Updates the project properties by reading the newest version of the
+        files. Potentially slow for large projects on slow disks.
+        """
+        self.ignored_patterns = self._get_git_ignore_patterns()
         self.files = []
         self._refresh_files(self.path)
 
-        languages = Counter(language_by_extension[f.suffix] for f in self.files)
-        self.language = languages.most_common()[0][0]
-        self.file_count = len(self.files)
+        if self.files:
+            languages = Counter(language_by_extension[f.suffix]
+                                for f in self.files)
+            # most_common returns a list of tuples (item, count).
+            self.language = languages.most_common(1)[0][0]
+        else:
+            self.language = 'Unknown'
+
 
     def _refresh_files(self, path):
+        """
+        Recursive function that appends the files found in `self.files`.
+        """
         name = path.name
+
+        # Ignore if hidden or temporary.
         if name.startswith('.') or name.startswith('__'):
             return
 
+        # Ignore if in .gitignore. 
         for pattern in self.ignored_patterns:
             if pattern.match(name):
                 return
@@ -64,9 +97,15 @@ class Project(object):
     def __repr__(self):
         return '{} ({})'.format(self.name, self.path)
 
-class Projects(object):
-    def __init__(self):
-        self.root = Path(r'E:\projects')
+class Workspace(object):
+    """
+    A workspace is a composed of projects.
+
+    Can be used as an iterator ("for project in workspace: ...") or by project
+    name ("workspace['news']").
+    """
+    def __init__(self, path):
+        self.root = Path(path)
         self.dirs = {}
         for d in self.root.iterdir():
             if (d / '.git').is_dir():
@@ -80,7 +119,6 @@ class Projects(object):
         return iter(self.dirs.values())
 
 if __name__ == '__main__':
-    projects = Projects()
-    l = list(projects)
-    for project in projects:
+    workspace = Workspace(r'E:\projects')
+    for project in workspace:
         print(project, project.language)
