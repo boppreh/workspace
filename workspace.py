@@ -22,6 +22,16 @@ class Project(object):
         end = clock()
         self.processing_time = int((end - start) * 100) / 100
 
+    def _convert_glob_to_regex(self, glob_pattern):
+        regex = glob_pattern
+        regex = regex.replace('.', r'\.') # Escape dots.
+        regex = regex.replace('*', '.*')
+        regex = regex.replace('+', r'\+') # Escape pluses
+        regex = regex.replace('/', '') # Ignore slashes
+        # Note glob patterns may have brackets, but they have the same
+        # semantics as regex brackets, so we may keep them.
+        return regex
+
     def refresh(self):
         gitignore = self.path / '.gitignore'
         self.ignored_patterns = []
@@ -29,7 +39,7 @@ class Project(object):
             with gitignore.open() as f:
                 for line in filter(len, f.read().split('\n')):
                     if not line.startswith('#'):
-                        regex = line.replace('.', r'\.').replace('*', '.*').replace('+', r'\+').replace('/', '')
+                        regex = self._convert_glob_to_regex(line)
                         self.ignored_patterns.append(re.compile(regex))
 
         self.files = []
