@@ -79,6 +79,9 @@ class Project(object):
         readmes = list(self.path.glob('README.*'))
         self.readme = readmes[0] if readmes else None
 
+        setups = list(self.path.glob('setup.*'))
+        self.setup = setups[0] if setups else None
+
     def _get_size_info(self):
         """
         Returns a count of all lines in all files in this project, and the path
@@ -208,6 +211,6 @@ class Workspace(object):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language, project.readme)
+        print(project, project.language, project.setup)
     #repo = workspace['simplecrypto'].repo()
     #print(repo, repo.age / 60 / 60 / 24)
