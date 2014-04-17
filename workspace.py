@@ -56,15 +56,16 @@ class Package(object):
         else:
             self.changes = None
             self.version = None
+            self.age = None
 
     def _refresh_from_changes(self, changes_file):
         self.changes = changes_file
-        self.age = self.changes.stat().st_mtime
+        self.age = time() - self.changes.stat().st_mtime
         with self.changes.open() as changes_text:
             self.version = changes_text.read().split()[0]
 
     def __repr__(self):
-        return 'v{} ('.format(self.version)
+        return 'v{} ({})'.format(self.version, pretty_seconds(self.age))
 
 class Project(object):
     """
@@ -236,6 +237,47 @@ class Workspace(object):
     def __iter__(self):
         return iter(self.dirs.values())
 
+
+def pretty_seconds(seconds):
+    """
+    Converts a number in seconds to a string with the best time unit match.
+    Ex:
+    1 -> 1 second
+    2 -> 2 seconds
+    50 -> 50 seconds
+    60 -> 1 minute
+    3600 -> 1 hour
+    7200 -> 2 hours
+    """
+    if seconds is None:
+        return 'None'
+
+    units = [
+            (1, 'second'),
+            (60, 'minute'),
+            (60, 'hour'),
+            (24, 'day'),
+            (30, 'month'),
+            (12, 'year'),
+            ]
+
+    value = seconds
+    unit_index = 0
+    # Finds the largest unit in which our value is not less than 1.
+    while unit_index + 1 < len(units):
+        multiplier, _ = units[unit_index + 1]
+        if multiplier > value:
+            break
+        value /= multiplier
+        unit_index += 1
+
+    name = units[unit_index][1]
+    rounded_value = round(value, 1)
+    if rounded_value > 1:
+        # We got lucky, appending an 's' works for all units so far.
+        name += 's'
+
+    return '{:g} {}'.format(rounded_value, name)
 
 
 if __name__ == '__main__':
