@@ -31,7 +31,7 @@ class GitRepository(object):
         """
         template = 'git --git-dir="{}" --work-tree="{}" {}'
         full_command = template.format(self.path / '.git', self.path, command)
-        return check_output(full_command, shell=True)
+        return check_output(full_command, shell=True).decode('utf-8')
 
     def __repr__(self):
         return '{}{} commits'.format('*' if self.is_dirty else '',
@@ -57,15 +57,33 @@ class Package(object):
             self.changes = None
             self.version = None
             self.age = None
+            self.unpublished_commits = None
 
     def _refresh_from_changes(self, changes_file):
         self.changes = changes_file
-        self.age = time() - self.changes.stat().st_mtime
+        self.last_version_date = self.changes.stat().st_mtime
+        self.age = time() - self.last_version_date
+
+        git_parameters_template = 'log --oneline --since={}'
+        git_parameters = git_parameters_template.format(self.last_version_date)
+        self.unpublished_commits = list(filter(len,
+                                    self.repo.git(git_parameters).split('\n')))
+
         with self.changes.open() as changes_text:
             self.version = changes_text.read().split()[0]
 
     def __repr__(self):
-        return 'v{} ({})'.format(self.version, pretty_seconds(self.age))
+        unpublished = self.unpublished_commits and len(self.unpublished_commits)
+        if not unpublished:
+            template = 'v{version} ({age})'
+        elif unpublished == 1:
+            template = 'v{version} ({age}, 1 commit behind)'
+        else:
+            template = 'v{version} ({age}, {unpublished} commits behind)'
+
+        return template.format(version=self.version,
+                               age=pretty_seconds(self.age),
+                               unpublished=unpublished)
 
 class Project(object):
     """
@@ -109,7 +127,7 @@ class Project(object):
         self.readme = readmes[0] if readmes else None
 
         package_file = self.path / 'setup.py'
-        self.package = Package(package_file, self.repo) if package_file.exists() else None
+        self.package = Package(package_file, self.repo()) if package_file.exists() else None
 
     def _get_size_info(self):
         """
@@ -284,5 +302,7 @@ if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
         print(project, project.language, project.package)
+        if project.package and project.package.unpublished_commits:
+            print(project.package.last_version_date, project.package.unpublished_commits)
     #repo = workspace['simplecrypto'].repo()
     #print(repo, repo.age / 60 / 60 / 24)

@@ -21,9 +21,9 @@ Version Control
 Package
 -------
 [x] Freshness (age of last version in seconds)
-[ ] Status (up to date/n commits ahead of published version)
+[x] Status (up to date/n commits ahead of published version)
 [ ] Convert (creates setup.py and uploads to PyPI) (use packager)
-[ ] Unpublished commits
+[x] Unpublished commits
 [ ] Make version (major/minor/fix)
 [ ] PyPI version
 
