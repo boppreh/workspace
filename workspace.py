@@ -45,20 +45,26 @@ class Package(object):
     
     Extracts information like version.
     """
-    def __init__(self, setup_file):
+    def __init__(self, setup_file, repo):
         self.setup = setup_file
+        self.repo = repo
+
         changes_file = setup_file.parent / 'CHANGES.txt'
 
         if changes_file.exists():
-            self.changes = changes_file
-            with self.changes.open() as changes_text:
-                self.version = changes_text.read().split()[0]
+            self._refresh_from_changes(changes_file)
         else:
             self.changes = None
             self.version = None
 
+    def _refresh_from_changes(self, changes_file):
+        self.changes = changes_file
+        self.age = self.changes.stat().st_mtime
+        with self.changes.open() as changes_text:
+            self.version = changes_text.read().split()[0]
+
     def __repr__(self):
-        return 'v{}'.format(self.version)
+        return 'v{} ('.format(self.version)
 
 class Project(object):
     """
@@ -102,7 +108,7 @@ class Project(object):
         self.readme = readmes[0] if readmes else None
 
         package_file = self.path / 'setup.py'
-        self.package = Package(package_file) if package_file.exists() else None
+        self.package = Package(package_file, self.repo) if package_file.exists() else None
 
     def _get_size_info(self):
         """
@@ -229,6 +235,8 @@ class Workspace(object):
 
     def __iter__(self):
         return iter(self.dirs.values())
+
+
 
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
