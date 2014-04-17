@@ -6,7 +6,7 @@ Project
 [x] Structure (single file/multiple files/module)
 [x] Docs (missing/present)
 [ ] Tests status (missing/failing/passing)
-[ ] Packaged (not packaged/package version)
+[x] Packaged (not packaged/package version)
 [x] Setup presence
 [x] README
 

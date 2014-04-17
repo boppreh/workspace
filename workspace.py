@@ -38,6 +38,28 @@ class GitRepository(object):
                                      self.commit_count)
 
 
+class Package(object):
+    """
+    Represents a (currently Python-only) distributable package. Must have a
+    setup file and possibly a CHANGES.txt one.
+    
+    Extracts information like version.
+    """
+    def __init__(self, setup_file):
+        self.setup = setup_file
+        changes_file = setup_file.parent / 'CHANGES.txt'
+
+        if changes_file.exists():
+            self.changes = changes_file
+            with self.changes.open() as changes_text:
+                self.version = changes_text.read().split()[0]
+        else:
+            self.changes = None
+            self.version = None
+
+    def __repr__(self):
+        return 'v{}'.format(self.version)
+
 class Project(object):
     """
     Represents a single project and its files. May be refreshed for updated
@@ -79,8 +101,8 @@ class Project(object):
         readmes = list(self.path.glob('README.*'))
         self.readme = readmes[0] if readmes else None
 
-        setups = list(self.path.glob('setup.*'))
-        self.setup = setups[0] if setups else None
+        package_file = self.path / 'setup.py'
+        self.package = Package(package_file) if package_file.exists() else None
 
     def _get_size_info(self):
         """
@@ -211,6 +233,6 @@ class Workspace(object):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language, project.setup)
+        print(project, project.language, project.package)
     #repo = workspace['simplecrypto'].repo()
     #print(repo, repo.age / 60 / 60 / 24)
