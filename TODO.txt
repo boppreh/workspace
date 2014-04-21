@@ -14,7 +14,7 @@ Version Control
 ---------------
 [x] Repository status (clean/dirty)
 [x] Number of commits
-[ ] Remote repository status (synced/ahead/behind)
+[/] Remote repository status (synced/ahead/behind)
 [x] Freshness (age in seconds)
 
 

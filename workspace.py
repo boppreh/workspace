@@ -19,9 +19,15 @@ class GitRepository(object):
     def __init__(self, path):
         self.path = Path(path)
         self.is_dirty = len(self.git('status --porcelain')) > 0
-        self.age = time() - int(self.git('log --format=%at"').split()[0])
+        self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
+        self.ahead = self.regit('status -b --porcelain', r'\[ahead (\d+)\]\n', int)
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
+
+    def regit(self, command, pattern, transformation=lambda x: x):
+        result = self.git(command)
+        match = re.search(pattern, result)
+        return transformation(match.groups()[0]) if match else None
 
     def git(self, command):
         """
@@ -138,7 +144,7 @@ class Project(object):
         largest_file_size = 0
         largest_file = None
         for file_path in self.files:
-            with file_path.open() as f:
+            with file_path.open(encoding='utf-8') as f:
                 file_size = sum(1 for line in f)
                 sloc += file_size
 
@@ -301,8 +307,10 @@ def pretty_seconds(seconds):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project, project.language, project.package)
-        if project.package and project.package.unpublished_commits:
-            print(project.package.last_version_date, project.package.unpublished_commits)
+        ahead = project.repo().ahead
+        if ahead:
+            print(project.name, ahead)
+        #if project.package and project.package.unpublished_commits:
+        #    print(project.package.last_version_date, project.package.unpublished_commits)
     #repo = workspace['simplecrypto'].repo()
     #print(repo, repo.age / 60 / 60 / 24)
