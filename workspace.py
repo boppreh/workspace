@@ -32,7 +32,7 @@ class GitRepository(object):
                                 r'\[ahead (\d+)\]\n', int) or 0
         self.behind = self.regit('status -b --porcelain',
                                  r'\[behind (\d+)\]\n', int) or 0
-        self.synced = self.behind == 0 and self.ahead == 0
+        self.synced = not self.behind and not self.ahead
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
 
@@ -432,13 +432,10 @@ def profile():
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        #project.repo.refresh_remote()
-        print(project.repo.origin)
         project.repo.change_origin_type('ssh')
-        print(project.repo.origin)
-        continue
+        project.repo.refresh_remote()
 
         if not project.repo.synced:
-            print(project.name, project.repo)
+            print('Syncing', project.name, project.repo)
             project.repo.sync()
-            print(project.name, project.repo)
+            print('Synced', project.name, project.repo)
