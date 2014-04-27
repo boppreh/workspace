@@ -25,6 +25,7 @@ class GitRepository(object):
         Refreshes the repository stats, such as dirtiness, age, number of
         commits ahead of origin and total commit count.
         """
+        self.origin = self._get_origin()
         self.is_dirty = len(self.git('status --porcelain')) > 0
         self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
         self.ahead = self.regit('status -b --porcelain',
@@ -34,6 +35,39 @@ class GitRepository(object):
         self.synced = self.behind == 0 and self.ahead == 0
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
+
+    def _get_origin(self):
+        origin = self.regit('remote show -n origin', 'Fetch URL: (.+)')
+        if origin == 'origin':
+            return None
+        else:
+            return origin
+
+    def change_origin_type(self, new_type):
+        """
+        Changes the origin URL type between 'https' or 'ssh'. Does nothing for
+        repos without remote branches.
+        """
+        if self.origin is None:
+            return
+
+        if self.origin.startswith('https://'):
+            extract_pattern = 'https://(.+?)/(.+?)/(.+?).git$'
+        elif self.origin.startswith('git@'):
+            extract_pattern = 'git@(.+?):(.+?)/(.+?)$'
+
+        domain, user, repo = re.match(extract_pattern, self.origin).groups()
+
+        if new_type == 'https':
+            set_pattern = 'https://{domain}/{user}/{repo}.git'
+        elif new_type == 'ssh':
+            set_pattern = 'git@{domain}:{user}/{repo}'
+        else:
+            raise ValueError('Unexpected origin type: ' + new_type +
+                             '.  Expected either "ssh" or "https".')
+
+        self.origin = set_pattern.format(domain=domain, user=user, repo=repo)
+        self.git('remote set-url origin ' + self.origin)
 
     def refresh_remote(self):
         """
@@ -398,7 +432,11 @@ def profile():
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        project.repo.refresh_remote()
+        #project.repo.refresh_remote()
+        print(project.repo.origin)
+        project.repo.change_origin_type('ssh')
+        print(project.repo.origin)
+        continue
 
         if not project.repo.synced:
             print(project.name, project.repo)
