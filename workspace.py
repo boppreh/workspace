@@ -109,6 +109,7 @@ class GitRepository(object):
         """
         self.git('pull')
         self.git('push')
+        self.refresh()
 
     def __repr__(self):
         if self.behind or self.ahead:
