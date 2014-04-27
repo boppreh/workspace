@@ -301,6 +301,9 @@ class Workspace(object):
     def __iter__(self):
         return iter(self.dirs.values())
 
+    def __len__(self):
+        return len(self.dirs)
+
 
 def pretty_seconds(seconds):
     """
@@ -345,11 +348,16 @@ def pretty_seconds(seconds):
 
 
 if __name__ == '__main__':
-    workspace = Workspace(r'E:\projects')
-    for project in workspace:
-        print(project.name)
-        project.repo.refresh_remote()
-        print(project.name, project.repo)
+    def list_projects():
+        workspace = Workspace(r'E:\projects')
+        print(len(workspace))
+
+    def list_repos():
+        workspace = Workspace(r'E:\projects')
+        print(len(project.repo for project in workspace))
+
+    import cProfile
+    cProfile.run('list_projects()')
         #if project.package and project.package.unpublished_commits:
         #    print(project.package.last_version_date, project.package.unpublished_commits)
     #repo = workspace['simplecrypto'].repo()
