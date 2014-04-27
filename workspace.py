@@ -18,11 +18,24 @@ class GitRepository(object):
     """
     def __init__(self, path):
         self.path = Path(path)
+        self.refresh()
+
+    def refresh(self):
+        self.behind = None
+
         self.is_dirty = len(self.git('status --porcelain')) > 0
         self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
-        self.ahead = self.regit('status -b --porcelain', r'\[ahead (\d+)\]\n', int)
+        self.ahead = self.regit('status -b --porcelain',
+                                r'\[ahead (\d+)\]\n', int) or 0
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
+
+    def refresh_remote(self):
+        has_remote = 'origin' in self.git('remote')
+        if has_remote:
+            self.git('fetch')
+            self.behind = self.regit('status -b --porcelain',
+                                     r'\[behind (\d+)\]\n', int) or 0
 
     def regit(self, command, pattern, transformation=lambda x: x):
         result = self.git(command)
@@ -40,8 +53,14 @@ class GitRepository(object):
         return check_output(full_command, shell=True).decode('utf-8')
 
     def __repr__(self):
-        return '{}{} commits'.format('*' if self.is_dirty else '',
-                                     self.commit_count)
+        if self.behind or self.ahead:
+            return '{}{} commits [+{}|-{}]'.format('*' if self.is_dirty else '',
+                                                   self.commit_count,
+                                                   self.ahead,
+                                                   self.behind)
+        else:
+            return '{}{} commits'.format('*' if self.is_dirty else '',
+                                         self.commit_count)
 
 
 class Package(object):
@@ -106,19 +125,24 @@ class Project(object):
         self.name = self.path.name
         self.refresh()
 
+    @property
     def repo(self):
         """
         Returns an up-to-date GitRepository object with information about the
         version control system of this project. Potentially slow to gather the
         information.
         """
-        return GitRepository(self.path)
+        if self._repo is None:
+            self._repo = GitRepository(self.path)
+        return self._repo
 
     def refresh(self):
         """
         Updates the project properties by reading the newest version of the
         files. Potentially slow for large projects on slow disks.
         """
+        self._repo = None
+
         self.ignored_patterns = self._get_git_ignore_patterns()
         self.files = []
         self._refresh_files(self.path)
@@ -133,7 +157,7 @@ class Project(object):
         self.readme = readmes[0] if readmes else None
 
         package_file = self.path / 'setup.py'
-        self.package = Package(package_file, self.repo()) if package_file.exists() else None
+        self.package = Package(package_file, self.repo) if package_file.exists() else None
 
     def _get_size_info(self):
         """
@@ -307,9 +331,9 @@ def pretty_seconds(seconds):
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        ahead = project.repo().ahead
-        if ahead:
-            print(project.name, ahead)
+        print(project.name)
+        project.repo.refresh_remote()
+        print(project.name, project.repo)
         #if project.package and project.package.unpublished_commits:
         #    print(project.package.last_version_date, project.package.unpublished_commits)
     #repo = workspace['simplecrypto'].repo()
