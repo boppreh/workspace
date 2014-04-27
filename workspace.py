@@ -25,14 +25,13 @@ class GitRepository(object):
         Refreshes the repository stats, such as dirtiness, age, number of
         commits ahead of origin and total commit count.
         """
-        self.behind = None
-
         self.is_dirty = len(self.git('status --porcelain')) > 0
         self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
         self.ahead = self.regit('status -b --porcelain',
                                 r'\[ahead (\d+)\]\n', int) or 0
         self.behind = self.regit('status -b --porcelain',
                                  r'\[behind (\d+)\]\n', int) or 0
+        self.synced = self.behind == 0 and self.ahead == 0
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
 
@@ -67,6 +66,15 @@ class GitRepository(object):
         template = 'git --git-dir="{}" --work-tree="{}" {}'
         full_command = template.format(self.path / '.git', self.path, command)
         return check_output(full_command, shell=True).decode('utf-8')
+
+    def sync(self):
+        """
+        Syncs this repo with the remote branch by 'pull'ing and then 'push'ing.
+        Merge conflicts may ensue and it doesn't care for what branch you are
+        in, so please be careful.
+        """
+        self.git('pull')
+        self.git('push')
 
     def __repr__(self):
         if self.behind or self.ahead:
@@ -390,5 +398,9 @@ def profile():
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
     for project in workspace:
-        print(project.name, project.files.largest_file)
-    #print(workspace['gl4'].repo.behind)
+        project.repo.refresh_remote()
+
+        if not project.repo.synced:
+            print(project.name, project.repo)
+            project.repo.sync()
+            print(project.name, project.repo)
