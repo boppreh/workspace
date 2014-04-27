@@ -31,6 +31,8 @@ class GitRepository(object):
         self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
         self.ahead = self.regit('status -b --porcelain',
                                 r'\[ahead (\d+)\]\n', int) or 0
+        self.behind = self.regit('status -b --porcelain',
+                                 r'\[behind (\d+)\]\n', int) or 0
         self.commit_count = sum(int(p.split()[0]) # "total username\n"
                                 for p in self.git('shortlog -s').splitlines())
 
@@ -42,10 +44,8 @@ class GitRepository(object):
         has_remote = 'origin' in self.git('remote')
         if has_remote:
             self.git('fetch')
-            self.ahead = self.regit('status -b --porcelain',
-                                    r'\[ahead (\d+)\]\n', int) or 0
-            self.behind = self.regit('status -b --porcelain',
-                                     r'\[behind (\d+)\]\n', int) or 0
+            # Update number of commits ahead or behind.
+            self.refresh()
 
     def regit(self, command, pattern, transformation=lambda x: x):
         """
@@ -346,19 +346,11 @@ def pretty_seconds(seconds):
 
     return '{:g} {}'.format(rounded_value, name)
 
+def profile():
+    import cProfile
+    cProfile.run('Workspace(r"E:\projects")')
+
 
 if __name__ == '__main__':
-    def list_projects():
-        workspace = Workspace(r'E:\projects')
-        print(len(workspace))
-
-    def list_repos():
-        workspace = Workspace(r'E:\projects')
-        print(len(project.repo for project in workspace))
-
-    import cProfile
-    cProfile.run('list_projects()')
-        #if project.package and project.package.unpublished_commits:
-        #    print(project.package.last_version_date, project.package.unpublished_commits)
-    #repo = workspace['simplecrypto'].repo()
-    #print(repo, repo.age / 60 / 60 / 24)
+    workspace = Workspace(r'E:\projects')
+    print(workspace['gl4'].repo.behind)
