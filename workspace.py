@@ -126,54 +126,56 @@ class Package(object):
                                age=pretty_seconds(self.age),
                                unpublished=unpublished)
 
-class Project(object):
-    """
-    Represents a single project and its files. May be refreshed for updated
-    information.
-    """
-    EMPTY = 'empty'
-    SINGLE_FILE = 'single file'
-    MULTIPLE_FILES = 'multiple files'
-    MODULE = 'module'
 
-    def __init__(self, path):
-        self.path = Path(path)
-        self.name = self.path.name
+class Files(object):
+    """
+    Represents the files of a project. Includes list of all file paths and
+    statistics about their size.
+    """
+    def __init__(self, root):
+        self.root = root
         self.refresh()
 
-    @property
-    def repo(self):
-        """
-        Returns an up-to-date GitRepository object with information about the
-        version control system of this project. Potentially slow to gather the
-        information.
-        """
-        if self._repo is None:
-            self._repo = GitRepository(self.path)
-        return self._repo
+    def __len__(self):
+        return len(self._files)
+
+    def __iter__(self):
+        return iter(self._files)
+
+    def __getitem__(self, index):
+        return self._files[index]
 
     def refresh(self):
         """
-        Updates the project properties by reading the newest version of the
-        files. Potentially slow for large projects on slow disks.
+        Updates the stats by reading all files.
         """
-        self._repo = None
-
         self.ignored_patterns = self._get_git_ignore_patterns()
-        self.files = []
-        self._refresh_files(self.path)
-        self.language = self._get_language()
+        self._files = []
+        self._refresh_files(self.root)
         self.structure = self._get_structure()
         self.sloc, self.largest_file = self._get_size_info()
 
-        docs = self.path / 'docs'
-        self.docs = docs if docs.exists() else None
+    def _refresh_files(self, path):
+        """
+        Recursive function that appends the files found to `self._files`.
+        """
+        name = path.name
 
-        readmes = list(self.path.glob('README.*'))
-        self.readme = readmes[0] if readmes else None
+        # Ignore if hidden or temporary.
+        if name.startswith('.') or name.startswith('__'):
+            return
 
-        package_file = self.path / 'setup.py'
-        self.package = Package(package_file, self.repo) if package_file.exists() else None
+        # Ignore if in .gitignore. 
+        for pattern in self.ignored_patterns:
+            if pattern.match(name):
+                return
+
+        if path.is_file():
+            if path.suffix in language_by_extension:
+                self._files.append(path)
+        else:
+            for f in path.iterdir():
+                self._refresh_files(f)
 
     def _get_size_info(self):
         """
@@ -183,7 +185,7 @@ class Project(object):
         sloc = 0
         largest_file_size = 0
         largest_file = None
-        for file_path in self.files:
+        for file_path in self._files:
             with file_path.open(encoding='utf-8') as f:
                 file_size = sum(1 for line in f)
                 sloc += file_size
@@ -216,7 +218,7 @@ class Project(object):
         """
         Returns the compiled regex patterns from the gitignore file.
         """
-        gitignore = self.path / '.gitignore'
+        gitignore = self.root / '.gitignore'
         if not gitignore.exists():
             return
 
@@ -226,56 +228,90 @@ class Project(object):
                     regex = self._convert_glob_to_regex(line)
                     yield re.compile(regex)
 
-    def _get_language(self):
-        if self.files:
-            # All files are programming files, so we are guaranteed to find
-            # some suffixes here.
-            languages = Counter(language_by_extension[f.suffix]
-                                for f in self.files)
-            # most_common returns a list of tuples (item, count).
-            return languages.most_common(1)[0][0]
-        else:
-            return 'Unknown'
-
     def _get_structure(self):
         """
         Identifies the project structure: empty (no files at all), module
         (files inside a module folder) or flat, which can be single or multiple
         file.
         """
-        if len(self.files) == 0:
+        if len(self._files) == 0:
             return Project.EMPTY
 
-        for f in self.files:
-            if len(f.parts) > len(self.path.parts) + 1:
+        for f in self._files:
+            if len(f.parts) > len(self.root.parts) + 1:
                 return Project.MODULE
 
-        if len(self.files) == 1:
+        if len(self._files) == 1:
             return Project.SINGLE_FILE
         else:
             return Project.MULTIPLE_FILES
 
-    def _refresh_files(self, path):
+
+class Project(object):
+    """
+    Represents a single project and its files. May be refreshed for updated
+    information.
+    """
+    EMPTY = 'empty'
+    SINGLE_FILE = 'single file'
+    MULTIPLE_FILES = 'multiple files'
+    MODULE = 'module'
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self.name = self.path.name
+        self.refresh()
+
+    @property
+    def repo(self):
         """
-        Recursive function that appends the files found to `self.files`.
+        Returns an up-to-date GitRepository object with information about the
+        version control system of this project. Potentially slow to gather the
+        information.
         """
-        name = path.name
+        if self._repo is None:
+            self._repo = GitRepository(self.path)
+        return self._repo
 
-        # Ignore if hidden or temporary.
-        if name.startswith('.') or name.startswith('__'):
-            return
+    @property
+    def files(self):
+        """
+        Returns an up-to-date object listing the project's files and their
+        attributes. Potentially slow for large projects.
+        """
+        if self._files is None:
+            self._files = Files(self.path)
+        return self._files
 
-        # Ignore if in .gitignore. 
-        for pattern in self.ignored_patterns:
-            if pattern.match(name):
-                return
 
-        if path.is_file():
-            if path.suffix in language_by_extension:
-                self.files.append(path)
+    def refresh(self):
+        """
+        Updates the project properties by reading the newest version of the
+        files. Potentially slow for large projects on slow disks.
+        """
+        self._repo = None
+        self._files = None
+
+        self.language = self._get_language()
+
+        docs = self.path / 'docs'
+        self.docs = docs if docs.exists() else None
+
+        readmes = list(self.path.glob('README.*'))
+        self.readme = readmes[0] if readmes else None
+
+        package_file = self.path / 'setup.py'
+        self.package = Package(package_file, self.repo) if package_file.exists() else None
+
+    def _get_language(self):
+        languages = Counter(language_by_extension[f.suffix]
+                            for f in self.path.iterdir()
+                            if f.suffix in language_by_extension)
+        if len(languages) == 0:
+            return 'Unknown'
         else:
-            for f in path.iterdir():
-                self._refresh_files(f)
+            # most_common returns a list of tuples (item, count).
+            return languages.most_common(1)[0][0]
 
     def __repr__(self):
         return '{} ({})'.format(self.name, self.path)
@@ -353,4 +389,6 @@ def profile():
 
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
-    print(workspace['gl4'].repo.behind)
+    for project in workspace:
+        print(project.name, project.files.largest_file)
+    #print(workspace['gl4'].repo.behind)
