@@ -42,6 +42,8 @@ class GitRepository(object):
         has_remote = 'origin' in self.git('remote')
         if has_remote:
             self.git('fetch')
+            self.ahead = self.regit('status -b --porcelain',
+                                    r'\[ahead (\d+)\]\n', int) or 0
             self.behind = self.regit('status -b --porcelain',
                                      r'\[behind (\d+)\]\n', int) or 0
 
