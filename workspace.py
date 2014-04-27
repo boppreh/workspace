@@ -21,6 +21,10 @@ class GitRepository(object):
         self.refresh()
 
     def refresh(self):
+        """
+        Refreshes the repository stats, such as dirtiness, age, number of
+        commits ahead of origin and total commit count.
+        """
         self.behind = None
 
         self.is_dirty = len(self.git('status --porcelain')) > 0
@@ -31,6 +35,10 @@ class GitRepository(object):
                                 for p in self.git('shortlog -s').splitlines())
 
     def refresh_remote(self):
+        """
+        Fetches the latests version of the origin branch, if one exists.
+        Because this is a network operation expect large delays.
+        """
         has_remote = 'origin' in self.git('remote')
         if has_remote:
             self.git('fetch')
@@ -38,6 +46,12 @@ class GitRepository(object):
                                      r'\[behind (\d+)\]\n', int) or 0
 
     def regit(self, command, pattern, transformation=lambda x: x):
+        """
+        Runs a git command and returns a value extracted from the output. If no
+        value matches the expected pattern, None is returned.
+        Optionally takes a transformation function that is used to convert the
+        value if it exists.
+        """
         result = self.git(command)
         match = re.search(pattern, result)
         return transformation(match.groups()[0]) if match else None
