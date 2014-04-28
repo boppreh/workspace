@@ -160,8 +160,10 @@ class Package(object):
             yield 'has no setup.py file'
         if self.changes is None:
             yield 'has no CHANGES.txt file'
-        if self.unpublished_commits > 0:
-            yield 'has {} commits to publish'.format(self.unpublished_commits)
+        if self.unpublished_commits is not None:
+            n = len(self.unpublished_commits)
+            if n > 0:
+                yield 'has {} commits to publish'.format(n)
 
     def _refresh_from_changes(self, changes_file):
         self.changes = changes_file
@@ -201,8 +203,10 @@ class Files(object):
 
     @property
     def problems(self):
-        # No problems to report so far.
-        pass
+        # No problems to report so far. This is a little hack to get an empty
+        # generator.
+        return
+        yield
 
     def __len__(self):
         return len(self._files)
@@ -338,7 +342,7 @@ class Project(object):
             yield from self.package.problems
 
         if self.readme is None:
-            yield 'has not README'
+            yield 'has no README'
 
     @property
     def repo(self):
