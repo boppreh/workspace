@@ -118,6 +118,9 @@ class GitRepository(object):
         Merge conflicts may ensue and it doesn't care for what branch you are
         in, so please be careful.
         """
+        if self.origin is None:
+            return
+
         self.git('pull')
         self.git('push')
         self.refresh()
