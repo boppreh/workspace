@@ -156,9 +156,9 @@ class Package(object):
 
     @property
     def problems(self):
-        if not self.setup:
+        if self.setup is None:
             yield 'has no setup.py file'
-        if not self.changes:
+        if self.changes is None:
             yield 'has no CHANGES.txt file'
         if self.unpublished_commits > 0:
             yield 'has {} commits to publish'.format(self.unpublished_commits)
@@ -198,6 +198,11 @@ class Files(object):
     def __init__(self, root):
         self.root = root
         self.refresh()
+
+    @property
+    def problems(self):
+        # No problems to report so far.
+        pass
 
     def __len__(self):
         return len(self._files)
@@ -324,6 +329,16 @@ class Project(object):
         self.path = Path(path)
         self.name = self.path.name
         self.refresh()
+
+    @property
+    def problems(self):
+        yield from self.repo.problems
+        yield from self.files.problems
+        if self.package:
+            yield from self.package.problems
+
+        if self.readme is None:
+            yield 'has not README'
 
     @property
     def repo(self):
