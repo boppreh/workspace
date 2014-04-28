@@ -20,6 +20,17 @@ class GitRepository(object):
         self.path = Path(path)
         self.refresh()
 
+    @property
+    def problems(self):
+        if self.is_dirty:
+            yield 'has uncommited changes'
+        if self.ahead > 0:
+            yield 'has {} commits to push'.format(self.ahead)
+        if self.behind > 0:
+            yield 'has {} commits to pull'.format(self.behind)
+        if self.origin and self.origin.startswith('https'):
+            yield 'is using HTTPS to sync'.format(self.behind)
+
     def refresh(self):
         """
         Refreshes the repository stats, such as dirtiness, age, number of
