@@ -409,6 +409,12 @@ class Workspace(object):
                 project = Project(d)
                 self.dirs[project.name.lower()] = project
 
+    @property
+    def problems(self):
+        for project in self:
+            for problem in project.problems:
+                yield project.name + ' ' + problem
+
     def __getitem__(self, name):
         return self.dirs[name.lower()]
 
@@ -467,11 +473,4 @@ def profile():
 
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
-    for project in workspace:
-        project.repo.change_origin_type('ssh')
-        project.repo.refresh_remote()
-
-        if not project.repo.synced:
-            print('Syncing', project.name, project.repo)
-            project.repo.sync()
-            print('Synced', project.name, project.repo)
+    print('\n'.join(workspace.problems))
