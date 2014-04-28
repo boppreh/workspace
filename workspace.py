@@ -154,6 +154,15 @@ class Package(object):
             self.age = None
             self.unpublished_commits = None
 
+    @property
+    def problems(self):
+        if not self.setup:
+            yield 'has no setup.py file'
+        if not self.changes:
+            yield 'has no CHANGES.txt file'
+        if self.unpublished_commits > 0:
+            yield 'has {} commits to publish'.format(self.unpublished_commits)
+
     def _refresh_from_changes(self, changes_file):
         self.changes = changes_file
         self.last_version_date = self.changes.stat().st_mtime
