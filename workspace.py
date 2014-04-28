@@ -477,4 +477,10 @@ def profile():
 
 if __name__ == '__main__':
     workspace = Workspace(r'E:\projects')
+    for project in workspace:
+        project.repo.sync()
+        project.refresh()
+
+    problems = list(workspace.problems)
     print('\n'.join(workspace.problems))
+    print('Total:', len(problems), 'problems.')
