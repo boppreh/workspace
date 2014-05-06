@@ -408,13 +408,15 @@ class Workspace(object):
     Can be used as an iterator ("for project in workspace: ...") or by project
     name ("workspace['news']").
     """
-    def __init__(self, path):
-        self.root = Path(path)
+    def __init__(self, *paths):
         self.dirs = {}
-        for d in self.root.iterdir():
-            if (d / '.git').is_dir():
-                project = Project(d)
-                self.dirs[project.name.lower()] = project
+
+        for path_name in paths:
+            path = Path(path_name)
+            for d in path.iterdir():
+                if (d / '.git').is_dir():
+                    project = Project(d)
+                    self.dirs[project.name.lower()] = project
 
     @property
     def problems(self):
@@ -479,7 +481,7 @@ def profile():
 
 
 if __name__ == '__main__':
-    workspace = Workspace(r'E:\projects')
+    workspace = Workspace(r'E:\projects', r'E:\projects\go\src\github.com\boppreh')
 
     if input('sync? (y/N)') == 'y':
         for project in workspace:
