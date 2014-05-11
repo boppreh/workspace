@@ -411,7 +411,7 @@ class Workspace(object):
     def __init__(self, *paths):
         self.dirs = {}
 
-        for path_name in paths:
+        for path_name in paths or ['../']:
             path = Path(path_name)
             for d in path.iterdir():
                 if (d / '.git').is_dir():
@@ -477,11 +477,11 @@ def pretty_seconds(seconds):
 
 def profile():
     import cProfile
-    cProfile.run('Workspace(r"E:\projects")')
+    cProfile.run('Workspace(r"../")')
 
 
 if __name__ == '__main__':
-    workspace = Workspace(r'E:\projects', r'E:\projects\go\src\github.com\boppreh')
+    workspace = Workspace(r'../', r'E:\projects\go\src\github.com\boppreh')
 
     if input('sync? (y/N)') == 'y':
         for project in workspace:
