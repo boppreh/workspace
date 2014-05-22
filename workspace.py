@@ -1,4 +1,5 @@
 from collections import Counter
+import os
 from pathlib import Path
 from time import clock, time
 import re
@@ -11,6 +12,35 @@ language_by_extension = {'.pyw': 'Python',
                           '.js': 'Javascript',
                           '.as': 'ActionScript',
                           '.java': 'Java'}
+
+try:
+    import ctypes.wintypes
+    CSIDL_DESKTOP = 0
+    SHGFP_TYPE_CURRENT = 0
+    SHGFP_TYPE_DEFAULT = 1
+
+    def get_desktop_location():
+        buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_DESKTOP, 0,
+                                               SHGFP_TYPE_CURRENT, buf)
+        return Path(buf.value)
+
+    def set_desktop_location(path):
+        buf = ctypes.create_unicode_buffer(str(path), ctypes.wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHSetFolderPathW(CSIDL_DESKTOP, 0,
+                                               SHGFP_TYPE_CURRENT, buf)
+        ctypes.windll.shell32.SHChangeNotify(0x8000000, 0x1000, None, None)
+
+    def get_default_desktop_location():
+        buf = ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_DESKTOP, 0,
+                                               SHGFP_TYPE_DEFAULT, buf)
+        return Path(buf.value)
+except ImportError as e:
+    def get_desktop_location(): return None
+    def set_desktop_location(path): pass
+    def get_default_desktop_location(path): return None
+
 
 class GitRepository(object):
     """
@@ -333,10 +363,21 @@ class Project(object):
     MODULE = 'module'
 
     def __init__(self, path):
-        self.path = Path(path)
+        self.path = Path(os.path.abspath(str(path)))
         self.name = self.path.name
         self.refresh()
 
+    def activate(self):
+        set_desktop_location(self.path)
+
+    def deactivate(self):
+        if self.active:
+            set_desktop_location(get_default_desktop_location())
+
+    @property
+    def active(self):
+        return get_desktop_location() == self.path
+    
     @property
     def problems(self):
         yield from self.repo.problems
