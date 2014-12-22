@@ -526,8 +526,11 @@ if __name__ == '__main__':
 
     if input('sync? (y/N)') == 'y':
         for project in workspace:
+            print(project)
+            project.repo.change_origin_type('ssh')
             project.repo.sync()
             project.refresh()
+            print('\n\n')
 
     problems = list(workspace.problems)
     print('\n'.join(problems))
