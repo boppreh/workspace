@@ -556,6 +556,7 @@ if __name__ == '__main__':
             except subprocess.CalledProcessError as e:
                 print('Skipping because of error:', e)
 
-    problems = list(workspace.problems)
-    print('\n'.join(problems))
-    print('Total:', len(problems), 'problems.')
+    count = 0
+    for problem in workspace.problems:
+        print(problem)
+    print('Total:', count, 'problems.')
