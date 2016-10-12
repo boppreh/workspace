@@ -54,11 +54,11 @@ class GitRepository(object):
 
     @property
     def problems(self):
-        if self.is_dirty:
-            if len(self.git('diff -w')):
-                yield 'has uncommited changes'
-            else:
-                yield 'has uncommited whitespace changes'
+        if self.is_whitespace_dirty:
+            yield 'has uncommited whitespace changes'
+        elif self.is_dirty:
+            yield 'has uncommited changes'
+
         if self.ahead > 0:
             yield 'has {} commits to push'.format(self.ahead)
         if self.behind > 0:
@@ -73,6 +73,7 @@ class GitRepository(object):
         """
         self.origin = self._get_origin()
         self.is_dirty = len(self.git('status --porcelain')) > 0
+        self.is_whitespace_dirty = len(self.git('diff')) and not len(self.git('diff -w'))
         self.age = time() - int(self.regit('log --format="%at"', r'^(\d+)'))
         self.ahead = self.regit('status -b --porcelain',
                                 r'\[ahead (\d+)\]\n', int) or 0
@@ -148,6 +149,10 @@ class GitRepository(object):
         match = re.search(pattern, result)
         return transformation(match.groups()[0]) if match else None
 
+    def commit_all(self, message):
+        self.git('commit -am "{}"'.format(message.replace('"', r'\"')))
+        self.refresh()
+
     def git(self, command):
         """
         Runs a git command on this repository, returning the output.
@@ -157,6 +162,14 @@ class GitRepository(object):
         template = 'git --git-dir="{}" --work-tree="{}" {}'
         full_command = template.format(self.path / '.git', self.path, command)
         return check_output(full_command, shell=True).decode('utf-8')
+
+    def soft_sync(self):
+        if self.origin is None:
+            return
+
+        self.git('fetch')
+        self.git('push')
+        self.refresh()
 
     def sync(self):
         """
@@ -546,21 +559,30 @@ def profile():
 if __name__ == '__main__':
     workspace = Workspace()
 
-    if input('sync? (y/N)') == 'y':
-        for project in workspace:
-            try:
-                print(project)
+    sync = input('sync? (y/N) ') == 'y'
+    auto_whitespace = input('auto commit whitespace? (y/N) ') == 'y'
+
+    problems_count = 0
+    for project in workspace:
+        try:
+            print(project)
+            if sync:
                 project.repo.change_origin_type('ssh')
                 if project.repo.origin and not project.repo.origin.startswith('git@github.com') and project.exists_on_github('boppreh'):
                     project.repo.change_origin('git@github.com/boppreh/{}'.format(project.name))
                 project.repo.sync()
                 project.refresh()
-                print('\n\n')
-            except subprocess.CalledProcessError as e:
-                print('Skipping because of error:', e)
+            if auto_whitespace and project.repo.is_whitespace_dirty:
+                print('Commit whitespace change.')
+                project.repo.git('add -u')
+                project.repo.commit_all('Change whitespace')
+            if project.repo.ahead:
+                project.repo.soft_sync()
+            for problem in project.problems:
+                problems_count += 1
+                print(problem)
+        except subprocess.CalledProcessError as e:
+            print('Skipping because of error:', e)
+        print('\n')
 
-    count = 0
-    for problem in workspace.problems:
-        print(problem)
-        count += 1
-    print('Total:', count, 'problems.')
+    print('Total:', problems_count, 'problems.')
