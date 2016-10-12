@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from time import clock, time
 import re
+import subprocess
 from subprocess import check_output
 
 language_by_extension = {'.pyw': 'Python',
@@ -84,6 +85,10 @@ class GitRepository(object):
             return None
         else:
             return origin
+
+    def change_origin(self, new_url):
+        self.origin = new_url
+        self.git('remote set-url origin ' + self.origin)
 
     def change_origin_type(self, new_type):
         """
@@ -447,6 +452,11 @@ class Project(object):
             # most_common returns a list of tuples (item, count).
             return languages.most_common(1)[0][0]
 
+    def exists_on_github(self, username):
+        import requests
+        result = requests.head('http://github.com/{}/{}'.format(username, self.name))
+        return result.status_code == 200
+
     def __repr__(self):
         return '{} ({})'.format(self.name, self.path)
 
@@ -538,6 +548,8 @@ if __name__ == '__main__':
             try:
                 print(project)
                 project.repo.change_origin_type('ssh')
+                if project.repo.origin and not project.repo.origin.startswith('git@github.com') and project.exists_on_github('boppreh'):
+                    project.repo.change_origin('git@github.com/boppreh/{}'.format(project.name))
                 project.repo.sync()
                 project.refresh()
                 print('\n\n')
