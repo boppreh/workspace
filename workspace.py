@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, OrderedDict
 import os
 from pathlib import Path
 from time import clock, time
@@ -94,7 +94,7 @@ class GitRepository(object):
             return True
 
         if self.origin.startswith('https://'):
-            extract_pattern = 'https://(.+?)/(.+?)/(.+?).git$'
+            extract_pattern = 'https://(.+?)/(.+?)/(.+?)(?:.git)?$'
         elif self.origin.startswith('git@'):
             extract_pattern = 'git@(.+?):(.+?)/(.+?)$'
         else:
@@ -458,7 +458,7 @@ class Workspace(object):
     name ("workspace['news']").
     """
     def __init__(self, *paths):
-        self.dirs = {}
+        self.dirs = OrderedDict()
 
         for path_name in paths or ['../']:
             path = Path(path_name)
@@ -531,15 +531,18 @@ def profile():
 
 
 if __name__ == '__main__':
-    workspace = Workspace(r'../')
+    workspace = Workspace()
 
     if input('sync? (y/N)') == 'y':
         for project in workspace:
-            print(project)
-            project.repo.change_origin_type('ssh')
-            project.repo.sync()
-            project.refresh()
-            print('\n\n')
+            try:
+                print(project)
+                project.repo.change_origin_type('ssh')
+                project.repo.sync()
+                project.refresh()
+                print('\n\n')
+            except subprocess.CalledProcessError as e:
+                print('Skipping because of error:', e)
 
     problems = list(workspace.problems)
     print('\n'.join(problems))
