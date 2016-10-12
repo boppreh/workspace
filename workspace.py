@@ -55,7 +55,10 @@ class GitRepository(object):
     @property
     def problems(self):
         if self.is_dirty:
-            yield 'has uncommited changes'
+            if len(self.git('diff -w')):
+                yield 'has uncommited changes'
+            else:
+                yield 'has uncommited whitespace changes'
         if self.ahead > 0:
             yield 'has {} commits to push'.format(self.ahead)
         if self.behind > 0:
