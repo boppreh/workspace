@@ -562,4 +562,5 @@ if __name__ == '__main__':
     count = 0
     for problem in workspace.problems:
         print(problem)
+        count += 1
     print('Total:', count, 'problems.')
