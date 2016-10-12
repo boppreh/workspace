@@ -13,7 +13,8 @@ language_by_extension = {'.pyw': 'Python',
                           '.as': 'ActionScript',
                           '.java': 'Java'}
 
-try:
+import platform
+if platform.system() == 'Windows':
     import ctypes.wintypes
     CSIDL_DESKTOP = 0
     SHGFP_TYPE_CURRENT = 0
@@ -36,7 +37,7 @@ try:
         ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_DESKTOP, 0,
                                                SHGFP_TYPE_DEFAULT, buf)
         return Path(buf.value)
-except ImportError as e:
+else:
     def get_desktop_location(): return None
     def set_desktop_location(path): pass
     def get_default_desktop_location(path): return None
@@ -68,7 +69,7 @@ class GitRepository(object):
         """
         self.origin = self._get_origin()
         self.is_dirty = len(self.git('status --porcelain')) > 0
-        self.age = time() - int(self.regit('log --format=%at"', r'^(\d+)'))
+        self.age = time() - int(self.regit('log --format="%at"', r'^(\d+)'))
         self.ahead = self.regit('status -b --porcelain',
                                 r'\[ahead (\d+)\]\n', int) or 0
         self.behind = self.regit('status -b --porcelain',
@@ -90,14 +91,20 @@ class GitRepository(object):
         repos without remote branches.
         """
         if self.origin is None:
-            return
+            return True
 
         if self.origin.startswith('https://'):
             extract_pattern = 'https://(.+?)/(.+?)/(.+?).git$'
         elif self.origin.startswith('git@'):
             extract_pattern = 'git@(.+?):(.+?)/(.+?)$'
+        else:
+            return False
 
-        domain, user, repo = re.match(extract_pattern, self.origin).groups()
+        match = re.match(extract_pattern, self.origin)
+        if not match:
+            return False
+
+        domain, user, repo = match.groups()
 
         if new_type == 'https':
             set_pattern = 'https://{domain}/{user}/{repo}.git'
@@ -109,6 +116,7 @@ class GitRepository(object):
 
         self.origin = set_pattern.format(domain=domain, user=user, repo=repo)
         self.git('remote set-url origin ' + self.origin)
+        return True
 
     def refresh_remote(self):
         """
@@ -454,8 +462,9 @@ class Workspace(object):
 
         for path_name in paths or ['../']:
             path = Path(path_name)
-            for d in path.iterdir():
-                if (d / '.git').is_dir():
+            for d in sorted(path.iterdir()):
+                if d.is_dir() and (d / '.git').is_dir():
+                    print(d)
                     project = Project(d)
                     self.dirs[project.name.lower()] = project
 
@@ -522,7 +531,7 @@ def profile():
 
 
 if __name__ == '__main__':
-    workspace = Workspace(r'../', r'E:\projects\go\src\github.com\boppreh')
+    workspace = Workspace(r'../')
 
     if input('sync? (y/N)') == 'y':
         for project in workspace:
