@@ -91,8 +91,13 @@ class GitRepository(object):
             return origin
 
     def change_origin(self, new_url):
+        if new_url is None:
+            self.git('remote remove origin')
+        elif self.origin:
+            self.git('remote set-url origin ' + new_url)
+        else:
+            self.git('remote add origin ' + new_url)
         self.origin = new_url
-        self.git('remote set-url origin ' + self.origin)
 
     def change_origin_type(self, new_type):
         """
@@ -126,6 +131,14 @@ class GitRepository(object):
         self.origin = set_pattern.format(domain=domain, user=user, repo=repo)
         self.git('remote set-url origin ' + self.origin)
         return True
+
+    def push_to_new_github(self, repository_name, username):
+        try:
+            project.repo.change_origin('git@github.com:{}/{}.git'.format(username, project.name))
+            project.repo.git('push -u origin master')
+        except subprocess.CalledProcessError as e:
+            project.repo.change_origin(None)
+            raise ValueError('Failed to publish repository' + project.name, e)
 
     def refresh_remote(self):
         """
@@ -470,7 +483,7 @@ class Project(object):
 
     def exists_on_github(self, username):
         import requests
-        result = requests.head('http://github.com/{}/{}'.format(username, self.name))
+        result = requests.head('http://github.com/{}/{}'.format(username, self.name), allow_redirects=True)
         return result.status_code == 200
 
     def __repr__(self):
@@ -490,7 +503,6 @@ class Workspace(object):
             path = Path(path_name)
             for d in sorted(path.iterdir()):
                 if d.is_dir() and (d / '.git').is_dir():
-                    print(d)
                     project = Project(d)
                     self.dirs[project.name.lower()] = project
 
@@ -561,16 +573,20 @@ if __name__ == '__main__':
 
     sync = input('sync? (y/N) ') == 'y'
     auto_whitespace = input('auto commit whitespace? (y/N) ') == 'y'
+    clean_index = input('clean index? (y/N) ') == 'y'
 
-    problems_count = 0
     for project in workspace:
         try:
             print(project)
             if sync:
                 project.repo.change_origin_type('ssh')
-                if project.repo.origin and not project.repo.origin.startswith('git@github.com') and project.exists_on_github('boppreh'):
-                    project.repo.change_origin('git@github.com/boppreh/{}'.format(project.name))
+                if (not project.repo.origin or not project.repo.origin.startswith('git@github.com')) and project.exists_on_github('boppreh'):
+                    project.repo.change_origin('git@github.com:boppreh/{}'.format(project.name))
                 project.repo.sync()
+                project.refresh()
+            if clean_index:
+                project.repo.git('add -u')
+                project.repo.git('reset')
                 project.refresh()
             if auto_whitespace and project.repo.is_whitespace_dirty:
                 print('Commit whitespace change.')
@@ -579,10 +595,14 @@ if __name__ == '__main__':
             if project.repo.ahead:
                 project.repo.soft_sync()
             for problem in project.problems:
-                problems_count += 1
                 print(problem)
         except subprocess.CalledProcessError as e:
             print('Skipping because of error:', e)
         print('\n')
 
-    print('Total:', problems_count, 'problems.')
+    count = 0
+    for problem in workspace.problems:
+        print(problem)
+        count += 1
+
+    print('Total:', count, 'problems.')
